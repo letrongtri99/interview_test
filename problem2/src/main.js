@@ -120,6 +120,18 @@ function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function focusAmountInput(selectionStart, selectionEnd = selectionStart) {
+  const input = document.querySelector('[data-action="amount"]');
+  if (!input || input.readOnly) return;
+
+  const valueLength = input.value.length;
+  const start = Math.min(selectionStart ?? valueLength, valueLength);
+  const end = Math.min(selectionEnd ?? start, valueLength);
+
+  input.focus({ preventScroll: true });
+  input.setSelectionRange(start, end);
+}
+
 function tokenButton(token, type) {
   return `
     <button class="tokenButton" ${state.isSubmitting ? "disabled" : ""} data-action="open-picker" data-type="${escapeHtml(type)}" type="button">
@@ -347,9 +359,16 @@ document.addEventListener("input", (event) => {
   const action = event.target.dataset.action;
 
   if (action === "amount") {
-    state.amount = event.target.value.replace(/,/g, "");
+    const rawValue = event.target.value;
+    const selectionStart = event.target.selectionStart ?? rawValue.length;
+    const selectionEnd = event.target.selectionEnd ?? selectionStart;
+    const commasBeforeStart = (rawValue.slice(0, selectionStart).match(/,/g) || []).length;
+    const commasBeforeEnd = (rawValue.slice(0, selectionEnd).match(/,/g) || []).length;
+
+    state.amount = rawValue.replace(/,/g, "");
     state.successMessage = "";
     render();
+    focusAmountInput(selectionStart - commasBeforeStart, selectionEnd - commasBeforeEnd);
   }
 
   if (action === "search") {
